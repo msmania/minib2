@@ -4,28 +4,29 @@ ARCH=amd64
 ARCH=x86
 !ENDIF
 
-OUTDIR=..\$(ARCH)
+GTEST=G:\10_Git\googletest
+O_GTEST=$(GTEST)\build\$(ARCH)\googlemock\gtest\Release
+O_GMOCK=$(GTEST)\build\$(ARCH)\googlemock\Release
+OUTDIR=$(ARCH)
 OBJDIR=$(ARCH)
 
 CC=cl
 RD=rd /s /q
 RM=del /q
 LINKER=link
-TARGET=minib2.exe
+TARGET=t.exe
 
 OBJS=\
 	$(OBJDIR)\blob.obj\
 	$(OBJDIR)\bitmap.obj\
-	$(OBJDIR)\addressbar.obj\
-	$(OBJDIR)\site.obj\
-	$(OBJDIR)\main.obj\
-	$(OBJDIR)\minib2.res\
+	$(OBJDIR)\bitmap-test.obj\
 
 LIBS=\
-	comctl32.lib\
 	gdi32.lib\
+	user32.lib\
+	gtest.lib\
+	gtest_main.lib\
 
-# warning C4100: unreferenced formal parameter
 CFLAGS=\
 	/nologo\
 	/c\
@@ -36,12 +37,16 @@ CFLAGS=\
 	/EHsc\
 	/Fo"$(OBJDIR)\\"\
 	/Fd"$(OBJDIR)\\"\
-	/wd4100\
+	/I..\src\
+	/I$(GTEST)\googlemock\include\
+	/I$(GTEST)\googletest\include\
 
 LFLAGS=\
 	/NOLOGO\
 	/DEBUG\
-	/SUBSYSTEM:WINDOWS\
+	/SUBSYSTEM:CONSOLE\
+	/LIBPATH:$(O_GTEST)\
+	/LIBPATH:$(O_GMOCK)\
 
 all: $(OUTDIR)\$(TARGET)
 
@@ -53,12 +58,9 @@ $(OUTDIR)\$(TARGET): $(OBJS)
 	@if not exist $(OBJDIR) mkdir $(OBJDIR)
 	$(CC) $(CFLAGS) $<
 
-.rc{$(OBJDIR)}.res:
+{../src}.cpp{$(OBJDIR)}.obj:
 	@if not exist $(OBJDIR) mkdir $(OBJDIR)
-	rc /nologo /fo "$@" $<
+	$(CC) $(CFLAGS) $<
 
 clean:
 	@if exist $(OBJDIR) $(RD) $(OBJDIR)
-	@if exist $(OUTDIR)\$(TARGET) $(RM) $(OUTDIR)\$(TARGET)
-	@if exist $(OUTDIR)\$(TARGET:exe=ilk) $(RM) $(OUTDIR)\$(TARGET:exe=ilk)
-	@if exist $(OUTDIR)\$(TARGET:exe=pdb) $(RM) $(OUTDIR)\$(TARGET:exe=pdb)

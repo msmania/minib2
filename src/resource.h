@@ -5,3 +5,4 @@
 #define ID_BROWSE_FORWARD               40004
 #define ID_DEBUG_DUMP                   40005
 #define ID_DEBUG_DUMPINFO               40006
+#define ID_DEBUG_SCREENSHOT             40007

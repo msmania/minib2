@@ -1,10 +1,16 @@
 #include <windows.h>
+#include <windowsx.h>
 #include <strsafe.h>
 #include <atlbase.h>
 #include <exdisp.h>
 #include <mshtmhst.h>
+#include <mshtml.h>
+#include <shobjidl.h>
 #include <memory>
+#include <fstream>
 #include "resource.h"
+#include "blob.h"
+#include "bitmap.h"
 #include "basewindow.h"
 #include "site.h"
 #include "addressbar.h"
@@ -154,6 +160,86 @@ private:
     }
   }
 
+  void DumpInfo() {
+    Log(L"> %s\n", __FUNCTIONW__);
+    if (CComPtr<IWebBrowser2> wb = container_.GetBrowser()) {
+      Log(L"  WebBrowser = %p\n", static_cast<LPVOID>(wb));
+      CComPtr<IDispatch> dispatch;
+      if (SUCCEEDED(wb->get_Document(&dispatch))) {
+        Log(L"  Document   = %p\n", static_cast<LPVOID>(dispatch));
+      }
+    }
+  }
+
+  CComPtr<IFileSaveDialog> savedialog_;
+
+  bool ShowSaveDialog(LPCWSTR defaultName,
+                      std::wstring &filepath) {
+    bool ret = false;
+    filepath = L"";
+    if (savedialog_ == nullptr) {
+      if (SUCCEEDED(savedialog_.CoCreateInstance(CLSID_FileSaveDialog))) {
+        static const COMDLG_FILTERSPEC filetypes[] = {
+          {L"24-bit Bitmap", L"*.bmp;*.dib"},
+        };
+        savedialog_->SetFileTypes(ARRAYSIZE(filetypes), filetypes);
+        savedialog_->SetDefaultExtension(L"bmp");
+      }
+    }
+
+    if (savedialog_) {
+      savedialog_->SetFileName(defaultName);
+      CComPtr<IShellItem> item;
+      if (SUCCEEDED(savedialog_->Show(hwnd()))
+          && SUCCEEDED(savedialog_->GetResult(&item))) {
+        LPWSTR displayName = nullptr;
+        if (SUCCEEDED(item->GetDisplayName(SIGDN_FILESYSPATH, &displayName))) {
+          ret = true;
+          filepath = displayName;
+          CoTaskMemFree(displayName);
+        }
+      }
+    }
+    return ret;
+  }
+
+  void ScreenShot() {
+    if (CComPtr<IWebBrowser2> wb = container_.GetBrowser()) {
+      long width, height;
+      if (SUCCEEDED(wb->get_Width(&width))
+          && width > 0
+          && SUCCEEDED(wb->get_Height(&height))
+          && height > 0) {
+        RECT scrollerRect;
+        SetRect(&scrollerRect, 0, 0, width, height);
+
+        std::wstring output;
+        if (!ShowSaveDialog(L"screenshot", output))
+          return;
+
+        if (auto memDC = SafeDC::CreateMemDC(hwnd())) {
+          if (auto dib = DIB::CreateNew(memDC,
+                                        /*bitCount*/24,
+                                        width,
+                                        height)) {
+            auto oldBitmap = SelectBitmap(memDC, dib);
+            HRESULT hr = OleDraw(wb, DVASPECT_CONTENT, memDC, &scrollerRect);
+            if (SUCCEEDED(hr)) {
+              std::ofstream os(output, std::ios::binary);
+              if (os.is_open()) {
+                dib.Save(os);
+              }
+            }
+            else {
+              Log(L"OleDraw failed - %08x\n", hr);
+            }
+            SelectBitmap(memDC, oldBitmap);
+          }
+        }
+      }
+    }
+  }
+
 public:
   LPCWSTR ClassName() const {
     return L"Minibrowser2 MainWindow";
@@ -197,13 +283,10 @@ public:
         }
         break;
       case ID_DEBUG_DUMPINFO:
-        if (CComPtr<IWebBrowser2> wb = container_.GetBrowser()) {
-          Log(L"IWebBrowser2   = %p\n", static_cast<LPVOID>(wb));
-          CComPtr<IDispatch> dispatch;
-          if (SUCCEEDED(wb->get_Document(&dispatch))) {
-            Log(L"IDispatch      = %p\n", static_cast<LPVOID>(dispatch));
-          }
-        }
+        DumpInfo();
+        break;
+      case ID_DEBUG_SCREENSHOT:
+        ScreenShot();
         break;
       default:
         ret = DefWindowProc(hwnd(), msg, w, l);
