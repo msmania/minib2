@@ -14,6 +14,7 @@
 #include "basewindow.h"
 #include "site.h"
 #include "addressbar.h"
+#include "eventsink.h"
 
 void Log(LPCWSTR format, ...) {
   WCHAR linebuf[1024];
@@ -26,6 +27,7 @@ void Log(LPCWSTR format, ...) {
 class BrowserContainer : public BaseWindow<BrowserContainer> {
 private:
   CComPtr<OleSite> site_;
+  CComPtr<EventSink> events_;
   CComPtr<IWebBrowser2> wb_;
 
   HRESULT ActivateBrowser() {
@@ -53,6 +55,24 @@ private:
                              &rc);
           }
         }
+      }
+    }
+    return hr;
+  }
+
+  HRESULT ConnectEventSink() {
+    events_.Attach(new EventSink(hwnd()));
+    if (!events_) {
+      return E_POINTER;
+    }
+
+    HRESULT hr = E_POINTER;
+    if (CComQIPtr<IConnectionPointContainer> cpc = wb_) {
+      CComPtr<IConnectionPoint> cp;
+      hr = cpc->FindConnectionPoint(DIID_DWebBrowserEvents2, &cp);
+      if (SUCCEEDED(hr)) {
+        DWORD cookie;
+        hr = cp->Advise(events_, &cookie);
       }
     }
     return hr;
@@ -91,7 +111,8 @@ public:
     LRESULT ret = 0;
     switch (uMsg) {
     case WM_CREATE:
-      if (FAILED(ActivateBrowser())) {
+      if (FAILED(ActivateBrowser())
+          || FAILED(ConnectEventSink())) {
         ret = -1;
       }
       break;
@@ -114,6 +135,12 @@ private:
 
   BrowserContainer container_;
   AddressBar addressBar_;
+  CComPtr<IFileSaveDialog> savedialog_;
+
+  struct Options {
+    bool autoCapture;
+    Options() : autoCapture(false) {}
+  } options_;
 
   bool InitChildControls() {
     RECT parentRect, addressbarArea;
@@ -170,8 +197,6 @@ private:
       }
     }
   }
-
-  CComPtr<IFileSaveDialog> savedialog_;
 
   bool ShowSaveDialog(LPCWSTR defaultName,
                       std::wstring &filepath) {
@@ -287,6 +312,19 @@ public:
         break;
       case ID_DEBUG_SCREENSHOT:
         ScreenShot();
+        break;
+      case ID_DEBUG_SCREENSHOT_EVENT:
+        if (options_.autoCapture) ScreenShot();
+        break;
+      case ID_OPTIONS_AUTOCAPTURE:
+        if (auto menu = GetMenu(hwnd())) {
+          options_.autoCapture = !options_.autoCapture;
+          MENUITEMINFO mi = { 0 };
+          mi.cbSize = sizeof(mi);
+          mi.fMask = MIIM_STATE;
+          mi.fState = options_.autoCapture ? MFS_CHECKED : MFS_UNCHECKED;
+          SetMenuItemInfo(menu, ID_OPTIONS_AUTOCAPTURE, FALSE, &mi);
+        }
         break;
       default:
         ret = DefWindowProc(hwnd(), msg, w, l);

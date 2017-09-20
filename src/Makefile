@@ -14,11 +14,12 @@ LINKER=link
 TARGET=minib2.exe
 
 OBJS=\
-	$(OBJDIR)\blob.obj\
-	$(OBJDIR)\bitmap.obj\
 	$(OBJDIR)\addressbar.obj\
-	$(OBJDIR)\site.obj\
+	$(OBJDIR)\bitmap.obj\
+	$(OBJDIR)\blob.obj\
+	$(OBJDIR)\eventsink.obj\
 	$(OBJDIR)\main.obj\
+	$(OBJDIR)\site.obj\
 	$(OBJDIR)\minib2.res\
 
 LIBS=\

@@ -10,7 +10,7 @@ OleSite::OleSite(HWND hwnd) : ref_(1), hwnd_(hwnd)
 {}
 
 OleSite::~OleSite() {
-  Log(L"%s", __FUNCTIONW__);
+  Log(L"%s\n", __FUNCTIONW__);
 }
 
 STDMETHODIMP OleSite::QueryInterface(REFIID riid, void **ppvObject) {
