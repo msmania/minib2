@@ -141,10 +141,10 @@ DIB::DIB(DIB &&other)
     bitmap_(other.bitmap_),
     lineSizeInBytes_(other.lineSizeInBytes_),
     bits_(other.bits_) {
-  info_ = {0};
-  bitmap_ = nullptr;
-  lineSizeInBytes_ = 0;
-  bits_ = nullptr;
+  other.info_ = {0};
+  other.bitmap_ = nullptr;
+  other.lineSizeInBytes_ = 0;
+  other.bits_ = nullptr;
 }
 
 DIB::~DIB() {
