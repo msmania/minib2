@@ -23,7 +23,7 @@ Blob::Blob()
     size_(0)
 {}
 
-Blob::Blob(DWORD size)
+Blob::Blob(SIZE_T size)
   : heap_(GetProcessHeap()),
     buffer_(nullptr),
     size_(0)
@@ -64,11 +64,11 @@ Blob &Blob::operator=(Blob &&other) {
   return *this;
 }
 
-DWORD Blob::Size() const {
+SIZE_T Blob::Size() const {
   return size_;
 }
 
-bool Blob::Alloc(DWORD size) {
+bool Blob::Alloc(SIZE_T size) {
   if (buffer_) {
     buffer_ = HeapReAlloc(GetProcessHeap(), 0, buffer_, size);
     if (buffer_) {

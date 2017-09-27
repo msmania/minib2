@@ -190,10 +190,18 @@ private:
   void DumpInfo() {
     Log(L"> %s\n", __FUNCTIONW__);
     if (CComPtr<IWebBrowser2> wb = container_.GetBrowser()) {
-      Log(L"  WebBrowser = %p\n", static_cast<LPVOID>(wb));
+      HWND browserWindow;
+      IUnknown_GetWindow(wb, &browserWindow);
+      Log(L"  WebBrowser = %p (HWND=%p)\n",
+          static_cast<LPVOID>(wb),
+          browserWindow);
+
       CComPtr<IDispatch> dispatch;
       if (SUCCEEDED(wb->get_Document(&dispatch))) {
-        Log(L"  Document   = %p\n", static_cast<LPVOID>(dispatch));
+        IUnknown_GetWindow(dispatch, &browserWindow);
+        Log(L"  Document   = %p (HWND=%p)\n",
+            static_cast<LPVOID>(dispatch),
+            browserWindow);
       }
     }
   }
@@ -205,7 +213,7 @@ private:
     if (savedialog_ == nullptr) {
       if (SUCCEEDED(savedialog_.CoCreateInstance(CLSID_FileSaveDialog))) {
         static const COMDLG_FILTERSPEC filetypes[] = {
-          {L"24-bit Bitmap", L"*.bmp;*.dib"},
+          {L"Bitmap", L"*.bmp;*.dib"},
         };
         savedialog_->SetFileTypes(ARRAYSIZE(filetypes), filetypes);
         savedialog_->SetDefaultExtension(L"bmp");
@@ -228,7 +236,7 @@ private:
     return ret;
   }
 
-  void ScreenShot() {
+  void OleDraw(LPCWSTR output, WORD bitCount) {
     if (CComPtr<IWebBrowser2> wb = container_.GetBrowser()) {
       long width, height;
       if (SUCCEEDED(wb->get_Width(&width))
@@ -238,17 +246,15 @@ private:
         RECT scrollerRect;
         SetRect(&scrollerRect, 0, 0, width, height);
 
-        std::wstring output;
-        if (!ShowSaveDialog(L"screenshot", output))
-          return;
-
         if (auto memDC = SafeDC::CreateMemDC(hwnd())) {
           if (auto dib = DIB::CreateNew(memDC,
-                                        /*bitCount*/24,
+                                        bitCount,
                                         width,
-                                        height)) {
+                                        height,
+                                        /*section*/nullptr,
+                                        /*initWithGrayscaleTable*/true)) {
             auto oldBitmap = SelectBitmap(memDC, dib);
-            HRESULT hr = OleDraw(wb, DVASPECT_CONTENT, memDC, &scrollerRect);
+            HRESULT hr = ::OleDraw(wb, DVASPECT_CONTENT, memDC, &scrollerRect);
             if (SUCCEEDED(hr)) {
               std::ofstream os(output, std::ios::binary);
               if (os.is_open()) {
@@ -265,6 +271,39 @@ private:
     }
   }
 
+  // https://msdn.microsoft.com/en-us/library/vs/alm/dd183402(v=vs.85).aspx
+  void Capture(LPCWSTR output, WORD bitCount) {
+    if (CComPtr<IWebBrowser2> wb = container_.GetBrowser()) {
+      HWND targetWindow;
+      long width, height;
+      if (SUCCEEDED(IUnknown_GetWindow(wb, &targetWindow))
+          && SUCCEEDED(wb->get_Width(&width))
+          && width > 0
+          && SUCCEEDED(wb->get_Height(&height))
+          && height > 0) {
+        if (HDC target = GetDC(targetWindow)) {
+          HANDLE section = nullptr;
+          DWORD uw = width, uh = height;
+          DIB dib;
+          if (bitCount == 8) {
+            dib = DIB::CaptureFromHDC(target, 32, uw, uh, section);
+            dib.ConvertToGrayscale(target, section);
+          }
+          else {
+            dib = DIB::CaptureFromHDC(target, bitCount, uw, uh, section);
+          }
+          if (dib) {
+            std::ofstream os(output, std::ios::binary);
+            if (os.is_open()) {
+              dib.Save(os);
+            }
+            ReleaseDC(targetWindow, target);
+          }
+        }
+      }
+    }
+  }
+
 public:
   LPCWSTR ClassName() const {
     return L"Minibrowser2 MainWindow";
@@ -272,6 +311,7 @@ public:
 
   LRESULT HandleMessage(UINT msg, WPARAM w, LPARAM l) {
     LRESULT ret = 0;
+    std::wstring output;
     switch (msg) {
     case WM_CREATE:
       if (!InitChildControls()) {
@@ -310,11 +350,22 @@ public:
       case ID_DEBUG_DUMPINFO:
         DumpInfo();
         break;
-      case ID_DEBUG_SCREENSHOT:
-        ScreenShot();
+      case ID_DEBUG_OLEDRAW:
+        if (ShowSaveDialog(L"oledraw", output)) {
+          OleDraw(output.c_str(), /*bitCount*/8);
+        }
+        break;
+      case ID_DEBUG_CAPTURE:
+        if (ShowSaveDialog(L"capture", output)) {
+          Capture(output.c_str(), /*bitCount*/8);
+        }
         break;
       case ID_DEBUG_SCREENSHOT_EVENT:
-        if (options_.autoCapture) ScreenShot();
+        if (options_.autoCapture) {
+          if (ShowSaveDialog(L"screenshot", output)) {
+            OleDraw(output.c_str(), /*bitCount*/8);
+          }
+        }
         break;
       case ID_OPTIONS_AUTOCAPTURE:
         if (auto menu = GetMenu(hwnd())) {

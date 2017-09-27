@@ -3,8 +3,8 @@
 #define ID_BROWSE_BACK                  40002
 #define ID_BROWSE_REFRESH               40003
 #define ID_BROWSE_FORWARD               40004
-#define ID_DEBUG_DUMP                   40005
-#define ID_DEBUG_DUMPINFO               40006
-#define ID_DEBUG_SCREENSHOT             40007
+#define ID_DEBUG_DUMPINFO               40005
+#define ID_DEBUG_OLEDRAW                40006
+#define ID_DEBUG_CAPTURE                40007
 #define ID_DEBUG_SCREENSHOT_EVENT       40008
 #define ID_OPTIONS_AUTOCAPTURE          40009

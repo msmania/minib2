@@ -15,7 +15,7 @@ public:
 
 class DIB {
 private:
-  BITMAPINFO info_;
+  Blob info_;
   HBITMAP bitmap_;
   DWORD lineSizeInBytes_;
   LPVOID bits_;
@@ -23,16 +23,31 @@ private:
   void Release();
 
 public:
-  static DIB LoadFromStream(std::istream &is, HDC dc);
-  static DIB CreateNew(HDC dc, WORD bitCount, LONG width, LONG height);
+  static DIB LoadFromStream(std::istream &is, HDC dc, HANDLE section);
+  static DIB CreateNew(HDC dc,
+                       WORD bitCount,
+                       LONG width,
+                       LONG height,
+                       HANDLE section,
+                       bool initWithGrayscaleTable);
+  static DIB CaptureFromHDC(HDC sourceDC,
+                            WORD bitCount,
+                            DWORD &width,
+                            DWORD &height,
+                            HANDLE section);
 
   DIB();
   DIB(DIB &&other);
   ~DIB();
+
   operator HBITMAP();
   DIB &operator=(DIB &&other);
+  const BITMAPINFO *GetBitmapInfo() const;
+  RGBQUAD *GetColorTable();
+  LPBYTE GetBits();
   std::ostream &Save(std::ostream &os) const;
   void CopyTo(Blob &blob) const;
+  bool ConvertToGrayscale(HDC dc, HANDLE section);
   LPBYTE At(DWORD x, DWORD y);
   LPCBYTE At(DWORD x, DWORD y) const;
 };
