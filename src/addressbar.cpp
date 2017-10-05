@@ -40,7 +40,7 @@ bool AddressBar::AddressEdit::Create(HWND parent,
                                      LPCWSTR caption) {
   hwnd_ = CreateWindow(L"Edit",
                        caption,
-                       WS_VISIBLE | WS_CHILD | WS_BORDER,
+                       WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL,
                        rect.left, rect.top,
                        rect.right - rect.left, rect.bottom - rect.top,
                        parent,
