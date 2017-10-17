@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <windowsx.h>
 #include <commctrl.h>
 #include <atlbase.h>
 #include "resource.h"
@@ -23,13 +24,23 @@ LRESULT CALLBACK AddressBar::AddressEdit::SubProcInternal(HWND hwnd,
                                                           LPARAM l,
                                                           UINT_PTR id) {
   LRESULT ret = 0;
-  if (msg == WM_KEYDOWN && w == VK_RETURN) {
-    PostMessage(GetParent(hwnd_), WM_COMMAND, MAKELONG(ID_BROWSE, 0), 0);
+  if (msg == WM_KEYDOWN) {
+    if (w == VK_RETURN)
+      PostMessage(GetParent(hwnd_), WM_COMMAND, MAKELONG(ID_BROWSE, 0), 0);
+    else if (w == 'A'
+             && ((GetKeyState(VK_LCONTROL) & 0x8000)
+                 || (GetKeyState(VK_RCONTROL) & 0x8000)))
+      Edit_SetSel(hwnd, 0, -1);
+    else
+      goto do_defproc;
   }
-  else {
-    ret = DefSubclassProc(hwnd, msg, w, l);
-  }
+  else
+    goto do_defproc;
+
   return ret;
+
+do_defproc:
+  return DefSubclassProc(hwnd, msg, w, l);
 }
 
 AddressBar::AddressEdit::AddressEdit() : hwnd_(nullptr)
