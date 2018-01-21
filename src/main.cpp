@@ -24,11 +24,47 @@ void Log(LPCWSTR format, ...) {
   OutputDebugString(linebuf);
 }
 
+const int AFX_IDW_PANE_FIRST = 0xE900;
+
+class FakeIconControl : public BaseWindow<FakeIconControl> {
+private:
+
+public:
+  LPCWSTR ClassName() const {
+    return L"FakeIconControl";
+  }
+
+  void OnGetIcon(HICON *icon) {
+    if (icon) {
+      *icon = LoadIcon (NULL, IDI_APPLICATION);
+    }
+  }
+
+  LRESULT HandleMessage(UINT msg, WPARAM w, LPARAM l) {
+    LRESULT ret = 0;
+    std::wstring output;
+    switch (msg) {
+    case WM_CREATE:
+      break;
+    case WM_DESTROY:
+      break;
+    case 0x087b:
+      OnGetIcon(reinterpret_cast<HICON*>(w));
+      break;
+    default:
+      ret = DefWindowProc(hwnd(), msg, w, l);
+      break;
+    }
+    return ret;
+  }
+};
+
 class BrowserContainer : public BaseWindow<BrowserContainer> {
 private:
   CComPtr<OleSite> site_;
   CComPtr<EventSink> events_;
   CComPtr<IWebBrowser2> wb_;
+  FakeIconControl fake_;
 
   HRESULT ActivateBrowser() {
     site_.Attach(new OleSite(hwnd()));
@@ -100,7 +136,7 @@ public:
   }
 
   LPCWSTR ClassName() const {
-    return L"Minibrowser2 Container";
+    return L"MMCChildFrm";
   }
 
   IWebBrowser2 *GetBrowser() {
@@ -115,6 +151,13 @@ public:
           || FAILED(ConnectEventSink())) {
         ret = -1;
       }
+      fake_.Create(L"FakeIconControl",
+                   WS_CHILD,
+                   /*style_ex*/0,
+                   0, 0, 20, 20,
+                   hwnd(),
+                   /*menu*/nullptr,
+                   AFX_IDW_PANE_FIRST);
       break;
     case WM_DESTROY:
       OnDestroy();

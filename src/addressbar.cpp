@@ -76,7 +76,7 @@ bool AddressBar::InitChildControls() {
   SetRect(&editArea, 0, 0,
           clientArea.right - clientArea.left - BUTTON_WIDTH * 3,
           height);
-  edit_.Create(hwnd(), editArea, L"about:blank");
+  edit_.Create(hwnd(), editArea, L"res://C:\\Windows\\system32\\mmcndmgr.dll/views.htm");
   buttonBack_ = CreateWindow(L"Button",
                              L"<",
                              buttonStyle,

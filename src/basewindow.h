@@ -32,7 +32,8 @@ public:
               int width = CW_USEDEFAULT,
               int height = CW_USEDEFAULT,
               HWND parent = nullptr,
-              LPCWSTR menu = nullptr) {
+              LPCWSTR menu = nullptr,
+              WORD id = 0) {
     if (!windowclass) {
       WNDCLASSEXW wcex = { 0 };
       wcex.cbSize = sizeof(wcex);
@@ -52,7 +53,7 @@ public:
                              style,
                              x, y, width, height,
                              parent,
-                             /*hMenu*/nullptr,
+                             /*hMenu*/reinterpret_cast<HMENU>(id),
                              GetModuleHandle(nullptr),
                              this);
     }
