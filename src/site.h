@@ -4,9 +4,10 @@ class OleSite : public IOleClientSite,
 private:
   ULONG ref_;
   HWND hwnd_;
+  CComPtr<IDispatch> external_;
 
 public:
-  OleSite(HWND hwnd);
+  OleSite(HWND hwnd, IDispatch *external);
   ~OleSite();
 
   // IUnknown

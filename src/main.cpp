@@ -16,6 +16,8 @@
 #include "addressbar.h"
 #include "eventsink.h"
 
+IDispatch *CreateExternalSink();
+
 void Log(LPCWSTR format, ...) {
   WCHAR linebuf[1024];
   va_list v;
@@ -28,11 +30,13 @@ class BrowserContainer : public BaseWindow<BrowserContainer> {
 private:
   CComPtr<OleSite> site_;
   CComPtr<EventSink> events_;
+  CComPtr<IDispatch> external_;
   CComPtr<IWebBrowser2> wb_;
 
   HRESULT ActivateBrowser() {
-    site_.Attach(new OleSite(hwnd()));
-    if (!site_) {
+    external_.Attach(CreateExternalSink());
+    site_.Attach(new OleSite(hwnd(), external_));
+    if (!site_ || !external_) {
       return E_POINTER;
     }
 

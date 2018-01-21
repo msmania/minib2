@@ -18,9 +18,10 @@ OBJS=\
 	$(OBJDIR)\bitmap.obj\
 	$(OBJDIR)\blob.obj\
 	$(OBJDIR)\eventsink.obj\
+	$(OBJDIR)\externalsink.obj\
 	$(OBJDIR)\main.obj\
-	$(OBJDIR)\site.obj\
 	$(OBJDIR)\minib2.res\
+	$(OBJDIR)\site.obj\
 
 LIBS=\
 	comctl32.lib\

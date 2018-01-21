@@ -6,7 +6,8 @@
 
 void Log(LPCWSTR format, ...);
 
-OleSite::OleSite(HWND hwnd) : ref_(1), hwnd_(hwnd)
+OleSite::OleSite(HWND hwnd, IDispatch *external)
+  : ref_(1), hwnd_(hwnd), external_(external)
 {}
 
 OleSite::~OleSite() {
@@ -193,7 +194,7 @@ IFACEMETHODIMP OleSite::GetDropTarget(_In_ IDropTarget *pDropTarget,
 }
 
 IFACEMETHODIMP OleSite::GetExternal(_Outptr_result_maybenull_ IDispatch **ppDispatch) {
-  return E_NOTIMPL;
+  return external_.CopyTo(ppDispatch);
 }
 
 IFACEMETHODIMP OleSite::TranslateUrl(DWORD dwTranslate,
