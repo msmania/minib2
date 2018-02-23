@@ -321,6 +321,7 @@ public:
       if (!InitChildControls()) {
         return -1;
       }
+      PostMessage(hwnd(), WM_COMMAND, ID_BROWSE, 0);
       break;
     case WM_DESTROY:
       PostQuitMessage(0);
@@ -394,14 +395,50 @@ public:
   }
 };
 
+std::wstring DetermineAwarenessLevel(const std::wstring &cmdline) {
+  std::wstring suffix;
+  if (cmdline.find(L"--v2_process") != std::string::npos) {
+    auto ret = SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+    if (ret)
+      suffix += L" V2_PROCESS";
+    else {
+      Log(L"SetProcessDpiAwarenessContext failed - %08x\n", GetLastError());
+      suffix += L" V2_PROCESS(fail)";
+    }
+  }
+  if (cmdline.find(L"--v2_thread") != std::string::npos) {
+    auto ret = SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+    Log(L"SetThreadDpiAwarenessContext - %p\n", ret);
+    suffix += L" V2_THREAD";
+  }
+  if (cmdline.find(L"--systemdpi_process") != std::string::npos) {
+    auto ret = SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_SYSTEM_AWARE);
+    if (ret)
+      suffix += L" SYSDPI_PROCESS";
+    else {
+      Log(L"SetProcessDpiAwarenessContext failed - %08x\n", GetLastError());
+      suffix += L" SYSDPI_PROCESS(fail)";
+    }
+  }
+  if (cmdline.find(L"--systemdpi_thread") != std::string::npos) {
+    auto ret = SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_SYSTEM_AWARE);
+    Log(L"SetThreadDpiAwarenessContext - %p\n", ret);
+    suffix += L" SYSDPI_THREAD";
+  }
+  return suffix;
+}
+
 int WINAPI wWinMain(HINSTANCE hInstance,
                     HINSTANCE,
                     PWSTR pCmdLine,
                     int nCmdShow) {
+  std::wstring title(L"Minibrowser2 -");
+  title += DetermineAwarenessLevel(pCmdLine);
+
   const auto flags = COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE;
   if (SUCCEEDED(CoInitializeEx(nullptr, flags))) {
     if (auto p = std::make_unique<MainWindow>()) {
-      if (p->Create(L"Minibrowser2",
+      if (p->Create(title.c_str(),
                     WS_OVERLAPPEDWINDOW,
                     /*style_ex*/0,
                     CW_USEDEFAULT, 0,
