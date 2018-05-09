@@ -95,6 +95,18 @@ static bool InjectScriptElement(CComQIPtr<IWebBrowser2> &wb,
   return false;
 }
 
+static void SetDesignMode(CComQIPtr<IWebBrowser2> &wb, bool value) {
+  CComPtr<IDispatch> dispatch;
+  if (SUCCEEDED(wb->get_Document(&dispatch))) {
+    if (CComQIPtr<IHTMLDocument2> doc = dispatch) {
+      CComBSTR value_str(value ? L"on" : L"off");
+      if (SUCCEEDED(doc->put_designMode(value_str))) {
+        Log(L"designMode has been set to %s\n", BSTR(value_str));
+      }
+    }
+  }
+}
+
 STDMETHODIMP EventSink::Invoke(_In_  DISPID dispIdMember,
                                _In_  REFIID riid,
                                _In_  LCID lcid,
@@ -120,6 +132,9 @@ STDMETHODIMP EventSink::Invoke(_In_  DISPID dispIdMember,
                                 L"window.close=function(){};";
         if (!InjectScriptElement(wb, SuppressAlert)) {
           Log(L"Failed to inject the script code.\n");
+        }
+        if (wcscmp(pDispParams->rgvarg[0].pvarVal->bstrVal, L"about:blank") == 0) {
+          SetDesignMode(wb, true);
         }
         PostMessage(GetParent(container_),
                     WM_COMMAND,
