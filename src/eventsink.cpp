@@ -13,7 +13,7 @@ EventSink::EventSink(HWND container)
 {}
 
 EventSink::~EventSink() {
-  Log(L"%s\n", __FUNCTIONW__);
+  Log(L"%s %p\n", __FUNCTIONW__, this);
 }
 
 STDMETHODIMP EventSink::QueryInterface(REFIID riid, void **ppvObject) {

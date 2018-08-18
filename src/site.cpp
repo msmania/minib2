@@ -11,7 +11,7 @@ OleSite::OleSite(HWND hwnd, IDispatch *external)
 {}
 
 OleSite::~OleSite() {
-  Log(L"%s\n", __FUNCTIONW__);
+  Log(L"%s %p\n", __FUNCTIONW__, this);
 }
 
 STDMETHODIMP OleSite::QueryInterface(REFIID riid, void **ppvObject) {

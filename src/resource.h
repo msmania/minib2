@@ -8,3 +8,5 @@
 #define ID_DEBUG_CAPTURE                40007
 #define ID_DEBUG_SCREENSHOT_EVENT       40008
 #define ID_OPTIONS_AUTOCAPTURE          40009
+#define ID_CONTROL_DESTROY              40010
+#define ID_CONTROL_CREATE               40011

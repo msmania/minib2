@@ -98,7 +98,7 @@ private:
 
 public:
   ~BrowserContainer() {
-    Log(L"> %s\n", __FUNCTIONW__);
+    Log(L"> %s %p\n", __FUNCTIONW__, this);
     Log(L"  OleSite      = %p\n", static_cast<LPVOID>(site_));
     Log(L"  IWebBrowser2 = %p\n", static_cast<LPVOID>(wb_));
   }
@@ -137,7 +137,7 @@ class MainWindow : public BaseWindow<MainWindow> {
 private:
   const int ADDRESSBAR_HEIGHT = 20;
 
-  BrowserContainer container_;
+  std::unique_ptr<BrowserContainer> container_;
   AddressBar addressBar_;
   CComPtr<IFileSaveDialog> savedialog_;
 
@@ -147,12 +147,8 @@ private:
   } options_;
 
   bool InitChildControls() {
-    RECT parentRect, addressbarArea;
+    RECT parentRect;
     GetClientRect(hwnd(), &parentRect);
-    SetRect(&addressbarArea,
-            0, 0,
-            parentRect.right - parentRect.left,
-            ADDRESSBAR_HEIGHT);
     addressBar_.Create(L"AddressBar",
                        WS_VISIBLE | WS_CHILD,
                        /*style_ex*/0,
@@ -161,15 +157,25 @@ private:
                        ADDRESSBAR_HEIGHT,
                        hwnd(),
                        /*menu*/nullptr);
-    container_.Create(L"Container",
-                      WS_VISIBLE | WS_CHILD,
-                      /*style_ex*/0,
-                      0, ADDRESSBAR_HEIGHT,
-                      parentRect.right - parentRect.left,
-                      parentRect.bottom - parentRect.top - ADDRESSBAR_HEIGHT,
-                      hwnd(),
-                      /*menu*/nullptr);
-    return addressBar_.hwnd() && container_.hwnd();
+    return addressBar_.hwnd();
+  }
+
+  bool InitBrowser() {
+    if (container_) {
+      DestroyWindow(container_->hwnd());
+    }
+    RECT parentRect;
+    GetClientRect(hwnd(), &parentRect);
+    container_ = std::make_unique<BrowserContainer>();
+    container_->Create(L"Container",
+                       WS_VISIBLE | WS_CHILD,
+                       /*style_ex*/0,
+                       0, ADDRESSBAR_HEIGHT,
+                       parentRect.right - parentRect.left,
+                       parentRect.bottom - parentRect.top - ADDRESSBAR_HEIGHT,
+                       hwnd(),
+                       /*menu*/nullptr);
+    return container_->hwnd();
   }
 
   void Resize() {
@@ -182,8 +188,8 @@ private:
                  ADDRESSBAR_HEIGHT,
                  /*bRepaint*/FALSE);
     }
-    if (container_.hwnd()) {
-      MoveWindow(container_.hwnd(),
+    if (container_ && container_->hwnd()) {
+      MoveWindow(container_->hwnd(),
                  0, ADDRESSBAR_HEIGHT,
                  clientSize.right - clientSize.left,
                  clientSize.bottom - clientSize.top - ADDRESSBAR_HEIGHT,
@@ -192,8 +198,9 @@ private:
   }
 
   void DumpInfo() {
+    if (!container_) return;
     Log(L"> %s\n", __FUNCTIONW__);
-    if (CComPtr<IWebBrowser2> wb = container_.GetBrowser()) {
+    if (CComPtr<IWebBrowser2> wb = container_->GetBrowser()) {
       HWND browserWindow;
       IUnknown_GetWindow(wb, &browserWindow);
       Log(L"  WebBrowser = %p (HWND=%p)\n",
@@ -241,7 +248,8 @@ private:
   }
 
   void OleDraw(LPCWSTR output, WORD bitCount) {
-    if (CComPtr<IWebBrowser2> wb = container_.GetBrowser()) {
+    if (!container_) return;
+    if (CComPtr<IWebBrowser2> wb = container_->GetBrowser()) {
       long width, height;
       if (SUCCEEDED(wb->get_Width(&width))
           && width > 0
@@ -277,7 +285,8 @@ private:
 
   // https://msdn.microsoft.com/en-us/library/vs/alm/dd183402(v=vs.85).aspx
   void Capture(LPCWSTR output, WORD bitCount) {
-    if (CComPtr<IWebBrowser2> wb = container_.GetBrowser()) {
+    if (!container_) return;
+    if (CComPtr<IWebBrowser2> wb = container_->GetBrowser()) {
       HWND targetWindow;
       long width, height;
       if (SUCCEEDED(IUnknown_GetWindow(wb, &targetWindow))
@@ -318,7 +327,7 @@ public:
     std::wstring output;
     switch (msg) {
     case WM_CREATE:
-      if (!InitChildControls()) {
+      if (!InitChildControls() || !InitBrowser()) {
         return -1;
       }
       PostMessage(hwnd(), WM_COMMAND, ID_BROWSE, 0);
@@ -331,25 +340,38 @@ public:
       break;
     case WM_COMMAND:
       switch (LOWORD(w)) {
+      case ID_CONTROL_DESTROY:
+        if (container_) {
+          DestroyWindow(container_->hwnd());
+          container_.reset(nullptr);
+        }
+        break;
+      case ID_CONTROL_CREATE:
+        InitBrowser();
+        break;
       case ID_BROWSE:
-        if (CComPtr<IWebBrowser> wb = container_.GetBrowser()) {
-          wb->Navigate(addressBar_.GetUrlText(), nullptr, nullptr, nullptr, nullptr);
+        if (container_) {
+          container_->GetBrowser()->Navigate(addressBar_.GetUrlText(),
+                                             nullptr,
+                                             nullptr,
+                                             nullptr,
+                                             nullptr);
         }
         break;
       case ID_BROWSE_BACK:
-        if (CComPtr<IWebBrowser2> wb = container_.GetBrowser()) {
-          wb->GoBack();
+        if (container_) {
+          container_->GetBrowser()->GoBack();
         }
         break;
       case ID_BROWSE_FORWARD:
-        if (CComPtr<IWebBrowser2> wb = container_.GetBrowser()) {
-          wb->GoForward();
+        if (container_) {
+          container_->GetBrowser()->GoForward();
         }
         break;
       case ID_BROWSE_REFRESH:
-        if (CComPtr<IWebBrowser2> wb = container_.GetBrowser()) {
+        if (container_) {
           CComVariant level(REFRESH_NORMAL);
-          wb->Refresh2(&level);
+          container_->GetBrowser()->Refresh2(&level);
         }
         break;
       case ID_DEBUG_DUMPINFO:

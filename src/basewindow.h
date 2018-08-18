@@ -40,7 +40,7 @@ public:
       wcex.lpfnWndProc = DERIVED_TYPE::WindowProc;
       wcex.hInstance = GetModuleHandle(nullptr);
       wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
-      wcex.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
+      wcex.hbrBackground = reinterpret_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
       wcex.lpszMenuName = menu;
       wcex.lpszClassName = ClassName();
       windowclass = RegisterClassExW(&wcex);

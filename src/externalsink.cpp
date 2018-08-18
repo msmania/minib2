@@ -56,7 +56,7 @@ public:
   }
 
   ~ExternalSink() {
-    ::Log(L"%s\n", __FUNCTIONW__);
+    ::Log(L"%s %p\n", __FUNCTIONW__, this);
   }
 
   // IUnknown
