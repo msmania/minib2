@@ -419,6 +419,7 @@ public:
 
 std::wstring DetermineAwarenessLevel(const std::wstring &cmdline) {
   std::wstring suffix;
+#if 0
   if (cmdline.find(L"--v2_process") != std::string::npos) {
     auto ret = SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     if (ret)
@@ -447,6 +448,7 @@ std::wstring DetermineAwarenessLevel(const std::wstring &cmdline) {
     Log(L"SetThreadDpiAwarenessContext - %p\n", ret);
     suffix += L" SYSDPI_THREAD";
   }
+#endif
   return suffix;
 }
 
