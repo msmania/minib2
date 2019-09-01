@@ -1,11 +1,81 @@
 #include <vector>
 #include <map>
+#include <string>
 #include <windows.h>
 #include <atlbase.h>
 
 void Log(LPCWSTR format, ...);
 
 static constexpr DISPID FirstMethodId = 100;
+
+class CustomFactory : public IClassFactory {
+  ULONG ref_;
+
+public:
+  CustomFactory() : ref_(1) {
+    //Log(L"%s: %p\n", __FUNCTIONW__, this);
+  }
+
+  virtual ~CustomFactory() {
+    //Log(L"%s: %p\n", __FUNCTIONW__, this);
+  }
+
+  // IUnknown
+  STDMETHOD(QueryInterface)(REFIID riid, void **ppvObject) {
+  const QITAB QITable[] = {
+    QITABENT(CustomFactory, IClassFactory),
+    { 0 },
+  };
+  return QISearch(this, QITable, riid, ppvObject);
+  }
+  STDMETHOD_(ULONG, AddRef)() {
+    Log(L"%s: %d -> %d\n", __FUNCTIONW__, ref_, ref_ + 1);
+    return InterlockedIncrement(&ref_);
+  }
+  STDMETHOD_(ULONG, Release)() {
+    Log(L"%s: %d -> %d\n", __FUNCTIONW__, ref_, ref_ - 1);
+    auto cref = InterlockedDecrement(&ref_);
+    if (cref == 0) {
+      delete this;
+    }
+    return cref;
+  }
+
+  // IClassFactory
+  STDMETHOD(CreateInstance)(
+    _Inout_opt_ LPUNKNOWN pUnkOuter,
+    _In_ REFIID riid,
+    _COM_Outptr_ void** ppvObj)
+  {
+    if (!ppvObj)
+      return E_POINTER;
+
+    *ppvObj = nullptr;
+
+    return E_NOTIMPL;
+  }
+
+  STDMETHOD(LockServer)(_In_ BOOL fLock) {
+    Log(L"%s: %c\n", __FUNCTIONW__, fLock ? '+' : '-');
+    return S_OK;
+  }
+};
+
+CustomFactory g_factory;
+
+void RegisterProtocol() {
+  CComPtr<IInternetSession> session;
+  HRESULT hr = CoInternetGetSession(0, &session, 0);
+  if (SUCCEEDED(hr)) {
+    hr = session->RegisterNameSpace(&g_factory,
+                                    CLSID_AboutProtocol,
+                                    L"about",
+                                    /*cPatterns*/0,
+                                    /*ppwzPatterns*/nullptr,
+                                    /*dwReserved*/0);
+    hr = session->UnregisterNameSpace(&g_factory, L"about");
+  }
+}
 
 class ExternalSink : public IDispatch {
 private:
@@ -30,6 +100,7 @@ private:
     if (context.params->cArgs == 1
         && context.params->rgvarg[0].vt == VT_BSTR) {
       ::Log(L"%s\n", V_BSTR(&context.params->rgvarg[0]));
+      RegisterProtocol();
       hr = S_OK;
     }
     return hr;

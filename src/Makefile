@@ -26,6 +26,7 @@ OBJS=\
 LIBS=\
 	comctl32.lib\
 	gdi32.lib\
+	urlmon.lib\
 
 # warning C4100: unreferenced formal parameter
 CFLAGS=\
