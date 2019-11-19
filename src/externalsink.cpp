@@ -1,4 +1,5 @@
 #include <vector>
+#include <string>
 #include <map>
 #include <windows.h>
 #include <atlbase.h>
